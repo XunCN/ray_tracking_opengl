@@ -9,6 +9,7 @@ set(app_name "ray_tracking")
 
 include_directories("vendor/glfw/include/")
 include_directories("vendor/glew/include/")
+include_directories("vendor/imgui/")
 
 link_directories("vendor/glfw/lib/")
 link_directories("vendor/glew/lib/")
@@ -19,7 +20,8 @@ link_libraries("glew32s")
 add_compile_definitions(GLEW_STATIC)
 
 file(GLOB_RECURSE SRC_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-add_executable(${app_name} ${SRC_LIST})
+file(GLOB_RECURSE THIRD_SRC_LIST ${CMAKE_CURRENT_SOURCE_DIR}/vendor/*.cpp)
+add_executable(${app_name} ${SRC_LIST} ${THIRD_SRC_LIST})
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/)
 
