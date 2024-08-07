@@ -6,57 +6,125 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-static void glfw_error_callback(int error, const char* description)
+void glfw_error_callback(int error, const char* description)
 {
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+    std::cerr << "GLFW Error " << error << ": " << description << '\n';
 }
 
-int main(void)
+#ifdef DEBUG
+void gl_debug_output(GLenum source, GLenum type, GLuint id, GLenum severity,
+    GLsizei length, const GLchar* message, const void* userParam)
+{
+    // ignore unimportant error/warning
+    if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+
+    std::cerr << "---------------" << std::endl;
+    std::cerr << "Debug message (" << id << "): " << message << std::endl;
+
+    switch(source)
+    {
+    case GL_DEBUG_SOURCE_API:             std::cerr << "Source: API"; break;
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cerr << "Source: Window System"; break;
+    case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cerr << "Source: Shader Compiler"; break;
+    case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cerr << "Source: Third Party"; break;
+    case GL_DEBUG_SOURCE_APPLICATION:     std::cerr << "Source: Application"; break;
+    case GL_DEBUG_SOURCE_OTHER:           std::cerr << "Source: Other"; break;
+    } std::cerr << std::endl;
+
+    switch(type)
+    {
+    case GL_DEBUG_TYPE_ERROR:               std::cerr << "Type: Error"; break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cerr << "Type: Deprecated Behaviour"; break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cerr << "Type: Undefined Behaviour"; break;
+    case GL_DEBUG_TYPE_PORTABILITY:         std::cerr << "Type: Portability"; break;
+    case GL_DEBUG_TYPE_PERFORMANCE:         std::cerr << "Type: Performance"; break;
+    case GL_DEBUG_TYPE_MARKER:              std::cerr << "Type: Marker"; break;
+    case GL_DEBUG_TYPE_PUSH_GROUP:          std::cerr << "Type: Push Group"; break;
+    case GL_DEBUG_TYPE_POP_GROUP:           std::cerr << "Type: Pop Group"; break;
+    case GL_DEBUG_TYPE_OTHER:               std::cerr << "Type: Other"; break;
+    } std::cerr << std::endl;
+
+    switch(severity)
+    {
+    case GL_DEBUG_SEVERITY_HIGH:         std::cerr << "Severity: high"; break;
+    case GL_DEBUG_SEVERITY_MEDIUM:       std::cerr << "Severity: medium"; break;
+    case GL_DEBUG_SEVERITY_LOW:          std::cerr << "Severity: low"; break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION: std::cerr << "Severity: notification"; break;
+    } std::cerr << std::endl;
+    std::cerr << std::endl;
+}
+#endif  // DEBUG
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if(key == GLFW_KEY_W && action == GLFW_PRESS  // Ctrl + W to exit
+        && glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+GLFWwindow* init(const char* window_name, unsigned width, unsigned height)
 {
     glfwSetErrorCallback(glfw_error_callback);
-
-    /* Initialize the library */
-    if (!glfwInit())
-        return -1;
+    if(!glfwInit())
+        return nullptr;
 
     const char* glsl_version = "#version 450";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
-    /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-    if (!window)
+    GLFWwindow* window = glfwCreateWindow(width, height, window_name, NULL, NULL);
+    if(!window)
     {
         glfwTerminate();
-        return -1;
+        return nullptr;
     }
-
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
-
     // glfwSwapInterval(1); // Enable vsync
+
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     GLenum err = glewInit();
     if(GLEW_OK != err)
     {
-        /* Problem: glewInit failed, something is seriously wrong. */
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-        return -1;
+        std::cerr << "glew init error: " << glewGetErrorString(err) << '\n';
+        return nullptr;
     }
-    fprintf(stdout, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
 
-    // Setup Dear ImGui context
+#ifdef DEBUG
+    GLint flags;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if(flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(gl_debug_output, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+    }
+    else
+    {
+        std::cout << "OpeGL debugger set failed\n";
+    }
+#endif // DEBUG
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-
-    // Setup Dear ImGui style
+    io.ConfigViewportsNoAutoMerge = true;
+    io.ConfigViewportsNoTaskBarIcon = true;
     ImGui::StyleColorsDark();
+
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
     if(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -69,8 +137,57 @@ int main(void)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    return window;
+}
+
+void clean(GLFWwindow* window)
+{
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void print_env_info()
+{
+    std::cout << "GLEW versison: " << glewGetString(GLEW_VERSION) << '\n';
+    std::cout << "OpenGL vendor: " << glGetString(GL_VENDOR) << '\n';
+    std::cout << "OpenGL renderer: " << glGetString(GL_RENDERER) << '\n';
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
+
+    int compute_shader_config[3] = {0};
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &compute_shader_config[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &compute_shader_config[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &compute_shader_config[2]);
+    std::cout << "max global work group counts x: " << compute_shader_config[0]
+        << " y: " << compute_shader_config[1] << " z: " << compute_shader_config[2] << '\n';
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &compute_shader_config[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &compute_shader_config[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &compute_shader_config[2]);
+    std::cout << "max local work group size x: " << compute_shader_config[0]
+        << " y: " << compute_shader_config[1] << " z: " << compute_shader_config[2] << '\n';
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &compute_shader_config[0]);
+    std::cout << "max work group invovations: " << compute_shader_config[0] << '\n';
+}
+
+int main(void)
+{
+
+    GLFWwindow* window = init("ray tracking", 1000, 800);
+    if(!window)
+    {
+        std::cerr << "Init failed\n";
+        return EXIT_FAILURE;
+    }
+
+    print_env_info();
+
+    ImGuiIO& io = ImGui::GetIO();
     ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\simkai.ttf",
-        20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
+20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     IM_ASSERT(font != nullptr);
 
     bool show_demo_window = true;
@@ -153,12 +270,8 @@ int main(void)
     }
 
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    clean(window);
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
     return 0;
 }
 
