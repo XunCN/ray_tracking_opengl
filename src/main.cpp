@@ -175,8 +175,14 @@ void print_env_info()
 
 int main(void)
 {
+    int window_width = 1000;
+    int window_height = 800;
+    int texture_width = 600;
+    float zoom_level = 1.0f;  // zoom level for texture size
+    float aspect_ratio = 16.0f / 9.0f;
+    int texture_height = texture_width / aspect_ratio;
 
-    GLFWwindow* window = init("ray tracking", 1000, 800);
+    GLFWwindow* window = init("ray tracking", window_width, window_height);
     if(!window)
     {
         std::cerr << "Init failed\n";
@@ -189,10 +195,6 @@ int main(void)
     ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\simkai.ttf",
 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     IM_ASSERT(font != nullptr);
-
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -209,50 +211,67 @@ int main(void)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        // set dock space for main window
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoNavFocus | ImGuiDockNodeFlags_NoDockingOverCentralNode;
+
+        ImGui::Begin("DOCK_BASE", nullptr, window_flags);
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+        ImGui::End();  // DOCK_BASE
+        ImGui::PopStyleVar(3);
+
+        // split view is not show as public api yet, drag the windows to arrange them
+        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+        ImGui::Begin("base viewer port", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
+
+        ImVec2 region = ImGui::GetContentRegionAvail();
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        int texture_show_width = texture_width * zoom_level;
+        int texture_show_height = texture_show_width / aspect_ratio;
+        pos = ImVec2(pos.x + (region.x - texture_show_width) / 2,
+            pos.y + (region.y - texture_show_height) / 2);
+
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRectFilled(ImVec2(pos.x, pos.y),
+            ImVec2(pos.x + texture_show_width, pos.y + texture_show_height),
+            ImU32(IM_COL32(60, 100, 30, 255)));
+
+        ImGui::End();  // base viewer port
+
+        ImGui::Begin(u8"渲染配置");
+
+        ImGui::SeparatorText(u8"渲染数据");
+        ImGui::Text(u8"渲染图像大小：%d X %d", texture_width, texture_height);
+        ImGui::Text(u8"显示图像大小：%d X %d", texture_show_width, texture_show_height);
+        ImGui::Dummy(ImGui::GetItemRectSize());  // keep an item sized empty space
+
+        ImGui::SeparatorText(u8"配置项");
+        ImGui::SliderFloat(u8"缩放", &zoom_level, 0.25, 8.0f);
+        ImGui::SameLine();
+        if(ImGui::Button("reset##zoom_level")) zoom_level = 1.0f;
+
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - ImGui::GetItemRectSize().y * 3);
+        ImGui::Separator();
+        static bool show_demo_window = false;
+        ImGui::Checkbox(u8"显示Dear ImGui演示窗口", &show_demo_window);
         if(show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if(ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if(show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if(ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
+        ImGui::End();  // 渲染配置
 
         // Rendering
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x* clear_color.w, clear_color.y* clear_color.w, clear_color.z* clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Update and Render additional Platform Windows
