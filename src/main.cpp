@@ -1,10 +1,13 @@
 #include <iostream>
+#include <memory>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+
+#include "texture.h"
 
 void glfw_error_callback(int error, const char* description)
 {
@@ -196,6 +199,17 @@ int main(void)
 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     IM_ASSERT(font != nullptr);
 
+    std::shared_ptr<float> p_texture(new float[texture_width * texture_height * 3], [](float* p) {delete[] p; });
+    for(int i = 0; i < texture_width * texture_height * 3;)
+    {
+        p_texture.get()[i++] = 0.1f;
+        p_texture.get()[i++] = 0.8f;
+        p_texture.get()[i++] = 0.3f;
+    }
+
+    Texture picture(texture_width, texture_height, Texture::ChannelType::RGB, Texture::DataType::FLOAT, p_texture.get());
+
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
@@ -242,10 +256,13 @@ int main(void)
         pos = ImVec2(pos.x + (region.x - texture_show_width) / 2,
             pos.y + (region.y - texture_show_height) / 2);
 
+        ImGui::SetCursorScreenPos(ImVec2(pos.x - .0f, pos.y - .0f));
+        ImGui::Image((void*)picture.get_id(), ImVec2(texture_show_width, texture_show_height));
+
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        draw_list->AddRectFilled(ImVec2(pos.x, pos.y),
+        draw_list->AddRect(ImVec2(pos.x, pos.y),
             ImVec2(pos.x + texture_show_width, pos.y + texture_show_height),
-            ImU32(IM_COL32(60, 100, 30, 255)));
+            ImU32(IM_COL32(160, 30, 30, 255)), 0.0f, 0, 3.0f);
 
         ImGui::End();  // base viewer port
 
