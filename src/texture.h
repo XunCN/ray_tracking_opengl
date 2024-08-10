@@ -41,7 +41,7 @@ public:
     size_t get_size(unsigned* pwidth = nullptr, unsigned* pheight = nullptr,
         ChannelType* pchannel_type = nullptr, DataType* pdata_type = nullptr);
     void resize(unsigned width, unsigned height, void* buffer = nullptr);
-    bool get_data(void* buffer, int size, int x = -1, int y = -1, int width = -1, int height = -1);
+    bool get_data(void* buffer, int buffer_size, int x = -1, int y = -1, int width = -1, int height = -1);
     bool set_data(void* buffer, int x = -1, int y = -1, int width = -1, int height = -1);
     bool save_as_ppm(const std::string& file_path);
 

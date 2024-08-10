@@ -127,7 +127,7 @@ void Texture::resize(unsigned width, unsigned height, void* buffer)
         width, height, 0, get_gl_channel_type(), get_gl_data_type(), buffer);
 }
 
-bool Texture::get_data(void* buffer, int size, int x, int y, int width, int height)
+bool Texture::get_data(void* buffer, int buffer_size, int x, int y, int width, int height)
 {
     if(x < 0) x = 0;
     if(y < 0) y = 0;
@@ -137,7 +137,7 @@ bool Texture::get_data(void* buffer, int size, int x, int y, int width, int heig
         return false;
 
     glGetTextureSubImage(m_id, 0, x, y, 0, width, height, 1,
-        get_gl_channel_type(), get_gl_data_type(), size, buffer);
+        get_gl_channel_type(), get_gl_data_type(), buffer_size, buffer);
     return true;
 }
 
@@ -165,43 +165,15 @@ bool Texture::save_as_ppm(const std::string& file_path)
     if(!fs)
         return false;
 
+    int buffer_size = get_size();
     int pixels = m_width * m_height;
-    int channels = 0;
-    switch(m_channel_type)
-    {
-    case ChannelType::GRAY:
-        channels = 1;
-        break;
-    case ChannelType::RGB:
-        channels = 3;
-        break;
-    case ChannelType::RGBA:
-        channels = 4;
-        break;
-    default:
-        return false;
-    }
-    if(channels != 3 && channels != 4)
-        return false;
-    int element_size = 0;
-    switch(m_data_type)
-    {
-    case DataType::UNSIGNED_BYTE:
-        element_size = sizeof(unsigned char);
-        break;
-    case DataType::FLOAT:
-        element_size = sizeof(float);
-        break;
-    default:
-        return false;
-    }
+    void* buf = new char[buffer_size];
 
     fs << "P6\n" << std::to_string(m_width) << " " << std::to_string(m_height) << "\n255\n";
 
-    int buffer_size = pixels * channels * element_size;
-    void* buf = new char[buffer_size];
-    glGetTextureImage(m_id, 0, get_gl_channel_type(), get_gl_data_type(), buffer_size, buf);
-    if(element_size == sizeof(unsigned char))
+    // glGetTextureImage(m_id, 0, get_gl_channel_type(), get_gl_data_type(), buffer_size, buf);
+    get_data(buf, buffer_size);
+    if(DataType::UNSIGNED_BYTE == m_data_type)
     {
         unsigned char* pc = (unsigned char*)buf;
         for(int i = 0; i < pixels; ++i)
@@ -209,11 +181,11 @@ bool Texture::save_as_ppm(const std::string& file_path)
             fs << saturate(*pc++);
             fs << saturate(*pc++);
             fs << saturate(*pc++);
-            if(channels == 4)
+            if(ChannelType::RGBA == m_channel_type)
                 pc++;
         }
     }
-    else  // if(element_size == sizeof(float))
+    else if(DataType::FLOAT == m_data_type)
     {
         float* pf = (float*)buf;
         for(int i = 0; i < pixels; ++i)
@@ -221,10 +193,12 @@ bool Texture::save_as_ppm(const std::string& file_path)
             fs << char(saturate(int((*pf++) * 255.999f)));
             fs << char(saturate(int((*pf++) * 255.999f)));
             fs << char(saturate(int((*pf++) * 255.999f)));
-            if(channels == 4)
+            if(ChannelType::RGBA == m_channel_type)
                 pf++;
         }
     }
+    else
+        return false;
 
     delete[] buf;
     return true;

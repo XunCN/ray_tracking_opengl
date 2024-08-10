@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <chrono>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -8,6 +9,8 @@
 #include <imgui_impl_opengl3.h>
 
 #include "texture.h"
+
+using namespace std::literals::chrono_literals; // for operator ""s and so on
 
 void glfw_error_callback(int error, const char* description)
 {
@@ -185,6 +188,9 @@ int main(void)
     float aspect_ratio = 16.0f / 9.0f;
     int texture_height = texture_width / aspect_ratio;
 
+    std::chrono::steady_clock::time_point texture_saved_time_point(0s);
+    bool texture_save_success = true;
+
     GLFWwindow* window = init("ray tracking", window_width, window_height);
     if(!window)
     {
@@ -269,6 +275,7 @@ int main(void)
         ImGui::Begin(u8"渲染配置");
 
         ImGui::SeparatorText(u8"渲染数据");
+        ImGui::Text(u8"渲染统计数据\n%.4f ms/frame\n%.4f FPS", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Text(u8"渲染图像大小：%d X %d", texture_width, texture_height);
         ImGui::Text(u8"显示图像大小：%d X %d", texture_show_width, texture_show_height);
         ImGui::Dummy(ImGui::GetItemRectSize());  // keep an item sized empty space
@@ -277,8 +284,22 @@ int main(void)
         ImGui::SliderFloat(u8"缩放", &zoom_level, 0.25, 8.0f);
         ImGui::SameLine();
         if(ImGui::Button("reset##zoom_level")) zoom_level = 1.0f;
+        if(ImGui::Button("保存图像"))
+        {
+            texture_saved_time_point = std::chrono::steady_clock::now();
+            std::string filename = "texture.ppm";
+            texture_save_success = picture.save_as_ppm(filename);
+        }
+        if(std::chrono::steady_clock::now() - texture_saved_time_point < 3s)
+        {
+            ImGui::SameLine();
+            if(texture_save_success)
+                ImGui::TextColored(ImVec4(0.0f, 0.8f, 0.0f, 1.0f), u8"文件保存成功");
+            else
+                ImGui::TextColored(ImVec4(0.8f, 0.0f, 0.0f, 1.0f), u8"文件保存失败");
+        }
 
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - ImGui::GetItemRectSize().y * 3);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetContentRegionAvail().y - ImGui::GetFontSize() * 2);
         ImGui::Separator();
         static bool show_demo_window = false;
         ImGui::Checkbox(u8"显示Dear ImGui演示窗口", &show_demo_window);
