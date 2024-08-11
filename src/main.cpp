@@ -60,6 +60,12 @@ void gl_debug_output(GLenum source, GLenum type, GLuint id, GLenum severity,
     case GL_DEBUG_SEVERITY_NOTIFICATION: std::cerr << "Severity: notification"; break;
     } std::cerr << std::endl;
     std::cerr << std::endl;
+
+#if defined (_MSC_VER)
+    __debugbreak();
+#else
+    assert(0);
+#endif  // WIN32
 }
 #endif  // DEBUG
 
