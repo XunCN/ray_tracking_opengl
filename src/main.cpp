@@ -4,9 +4,11 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+#include <glm/vec3.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "texture.h"
 
@@ -181,6 +183,12 @@ void print_env_info()
 
 int main(void)
 {
+    glm::vec4 pt(10, 20, 30, 1);
+    glm::mat4 tf(1.0);
+    tf = glm::translate(tf, glm::vec3(1, 2, 3));
+    pt = tf * pt;
+    std::cout << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3] << "\n";
+
     int window_width = 1000;
     int window_height = 800;
     int texture_width = 600;

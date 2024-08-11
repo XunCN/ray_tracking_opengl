@@ -10,6 +10,7 @@ set(app_name "ray_tracking")
 include_directories("vendor/glfw/include/")
 include_directories("vendor/glew/include/")
 include_directories("vendor/imgui/")
+include_directories("vendor/glm/")
 
 link_directories("vendor/glfw/lib/")
 link_directories("vendor/glew/lib/")
