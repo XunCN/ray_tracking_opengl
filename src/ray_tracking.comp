@@ -1,0 +1,26 @@
+#version 450 core
+// 每个Invocation处理一个像素点
+// 每个group处理local_size_x * local_size_y * local_size_z个Invocation
+// 使用的group数目在shader外由glDispatchCompute设定
+
+const int patch_size_x = 32;
+const int patch_size_y = 32;
+
+layout (local_size_x = patch_size_x, local_size_y = patch_size_y) in;
+layout (rgba32f, binding=0) uniform image2D texture_image;
+
+void render()
+{
+	int pos_x = int(gl_GlobalInvocationID.x);
+	int pos_y = int(gl_GlobalInvocationID.y);
+	ivec2 sz = imageSize(texture_image);
+	if(pos_x >= sz.x || pos_y >= sz.y)
+		return;
+	imageStore(texture_image, ivec2(pos_x, pos_y),
+		vec4(float(pos_x) / float(sz.x), float(pos_y) / float(sz.y), 0.0f, 1.0f));
+}
+
+void main()
+{
+	render();
+}

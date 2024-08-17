@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "texture.h"
+#include "shader.h"
 
 using namespace std::literals::chrono_literals; // for operator ""s and so on
 
@@ -213,9 +214,23 @@ int main(void)
 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     IM_ASSERT(font != nullptr);
 
-    Texture picture(texture_width, texture_height, Texture::ChannelType::RGB, Texture::DataType::FLOAT, nullptr);
-    picture.set_data(glm::vec3(0.0f, 0.8f, 0.0f));
+    Texture picture(texture_width, texture_height, Texture::ChannelType::RGBA, Texture::DataType::FLOAT, nullptr);
+    picture.set_data(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    picture.activate(0);
+    picture.set_access_for_shader(Texture::Access::READ_WRITE);
 
+    Shader shader;
+    shader.add_compute_shader("../src/ray_tracking.comp");
+    shader.build_shader();
+    shader.work();
+
+    const int patch_size_x = 32;
+    const int patch_size_y = 32;
+
+    const int group_size_x = std::ceil(texture_width * 1.0 / patch_size_x);
+    const int group_size_y = std::ceil(texture_height * 1.0 / patch_size_y);
+
+    glDispatchCompute(group_size_x, group_size_y, 1);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -260,15 +275,17 @@ int main(void)
         ImVec2 pos = ImGui::GetCursorScreenPos();
         int texture_show_width = texture_width * zoom_level;
         int texture_show_height = texture_show_width / aspect_ratio;
-        pos = ImVec2(pos.x + (region.x - texture_show_width) / 2,
+        ImVec2 img_pos = ImVec2(pos.x + (region.x - texture_show_width) / 2,
             pos.y + (region.y - texture_show_height) / 2);
+        if(img_pos.x < pos.x || img_pos.y < pos.y)
+            img_pos = pos;
 
-        ImGui::SetCursorScreenPos(ImVec2(pos.x - .0f, pos.y - .0f));
+        ImGui::SetCursorScreenPos(img_pos);
         ImGui::Image((void*)picture.get_id(), ImVec2(texture_show_width, texture_show_height));
 
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        draw_list->AddRect(ImVec2(pos.x, pos.y),
-            ImVec2(pos.x + texture_show_width, pos.y + texture_show_height),
+        draw_list->AddRect(img_pos,
+            ImVec2(img_pos.x + texture_show_width, img_pos.y + texture_show_height),
             ImU32(IM_COL32(160, 30, 30, 255)), 0.0f, 0, 3.0f);
 
         ImGui::End();  // base viewer port

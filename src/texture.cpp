@@ -73,6 +73,7 @@ bool Texture::set_access_for_shader(Access access)
     }
     if(m_slot < 0)
         activate(0);
+    // WARNING: GL_RGBA32F is not a valid type for this func
     glBindImageTexture(m_slot, m_id, 0, GL_FALSE, 0, mode, get_internal_type(m_channel_type, m_data_type));
     return true;
 }
@@ -156,7 +157,7 @@ bool Texture::set_data(void* buffer, int x, int y, int width, int height)
     return true;
 }
 
-bool Texture::set_data(glm::vec3 color, int x, int y, int width, int height)
+bool Texture::set_data(glm::vec4 color, int x, int y, int width, int height)
 {
     if(m_data_type != DataType::FLOAT)
     {
@@ -169,13 +170,14 @@ bool Texture::set_data(glm::vec3 color, int x, int y, int width, int height)
     if(height < 0) height = m_height;
     if(x + width > m_width || y + height > m_height)
         return false;
-    float* buffer = new float[width * height * 3];
+    float* buffer = new float[width * height * 4];
     for(int i = 0; i < width * height; ++i)
     {
         int idx = i * 3;
         buffer[idx++] = color.r;
         buffer[idx++] = color.g;
         buffer[idx++] = color.b;
+        buffer[idx++] = color.a;
     }
     glTextureSubImage2D(m_id, 0, x, y, width, height,
         get_gl_channel_type(), get_gl_data_type(), buffer);

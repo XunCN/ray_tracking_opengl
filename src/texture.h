@@ -3,7 +3,7 @@
 
 #include <string>
 #include <GL/glew.h>
-#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 class Texture
 {
@@ -44,7 +44,7 @@ public:
     void resize(unsigned width, unsigned height, void* buffer = nullptr);
     bool get_data(void* buffer, int buffer_size, int x = -1, int y = -1, int width = -1, int height = -1);
     bool set_data(void* buffer, int x = -1, int y = -1, int width = -1, int height = -1);
-    bool set_data(glm::vec3 color, int x = -1, int y = -1, int width = -1, int height = -1);
+    bool set_data(glm::vec4 color, int x = -1, int y = -1, int width = -1, int height = -1);
     bool save_as_ppm(const std::string& file_path);
 
 private:
