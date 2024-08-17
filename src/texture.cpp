@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include <stdexcept>
 
@@ -152,6 +153,33 @@ bool Texture::set_data(void* buffer, int x, int y, int width, int height)
 
     glTextureSubImage2D(m_id, 0, x, y, width, height,
         get_gl_channel_type(), get_gl_data_type(), buffer);
+    return true;
+}
+
+bool Texture::set_data(glm::vec3 color, int x, int y, int width, int height)
+{
+    if(m_data_type != DataType::FLOAT)
+    {
+        std::cerr << "texture data type is not float, can not set float vec3 data.\n";
+        return false;
+    }
+    if(x < 0) x = 0;
+    if(y < 0) y = 0;
+    if(width < 0) width = m_width;
+    if(height < 0) height = m_height;
+    if(x + width > m_width || y + height > m_height)
+        return false;
+    float* buffer = new float[width * height * 3];
+    for(int i = 0; i < width * height; ++i)
+    {
+        int idx = i * 3;
+        buffer[idx++] = color.r;
+        buffer[idx++] = color.g;
+        buffer[idx++] = color.b;
+    }
+    glTextureSubImage2D(m_id, 0, x, y, width, height,
+        get_gl_channel_type(), get_gl_data_type(), buffer);
+    delete[] buffer;
     return true;
 }
 

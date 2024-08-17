@@ -189,12 +189,6 @@ void print_env_info()
 
 int main(void)
 {
-    glm::vec4 pt(10, 20, 30, 1);
-    glm::mat4 tf(1.0);
-    tf = glm::translate(tf, glm::vec3(1, 2, 3));
-    pt = tf * pt;
-    std::cout << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3] << "\n";
-
     int window_width = 1000;
     int window_height = 800;
     int texture_width = 600;
@@ -219,15 +213,8 @@ int main(void)
 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
     IM_ASSERT(font != nullptr);
 
-    std::shared_ptr<float> p_texture(new float[texture_width * texture_height * 3], [](float* p) {delete[] p; });
-    for(int i = 0; i < texture_width * texture_height * 3;)
-    {
-        p_texture.get()[i++] = 0.1f;
-        p_texture.get()[i++] = 0.8f;
-        p_texture.get()[i++] = 0.3f;
-    }
-
-    Texture picture(texture_width, texture_height, Texture::ChannelType::RGB, Texture::DataType::FLOAT, p_texture.get());
+    Texture picture(texture_width, texture_height, Texture::ChannelType::RGB, Texture::DataType::FLOAT, nullptr);
+    picture.set_data(glm::vec3(0.0f, 0.8f, 0.0f));
 
 
     /* Loop until the user closes the window */
